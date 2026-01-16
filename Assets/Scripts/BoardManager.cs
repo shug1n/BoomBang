@@ -37,22 +37,21 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    private void CreateBox(Vector2Int pos, Box newBox, int randNum)
+    private void CreateBox(Vector2Int pos, Box bossPrefab, int randNum)
     {
         Vector2 posSum = startPos + new Vector2(pos.x * tileSpacing, pos.y * tileSpacing);
-        Box box = Instantiate(newBox, new Vector3(posSum.x, posSum.y, 0), Quaternion.identity);
+        Box box = Instantiate(bossPrefab, new Vector3(posSum.x, posSum.y, 0), Quaternion.identity);
 
         box.transform.parent = this.gameObject.transform;
         box.name = $"{pos.x}, {pos.y}";
-        SpriteRenderer sr = newBox.GetComponent<SpriteRenderer>();
+        SpriteRenderer sr = box.GetComponent<SpriteRenderer>();
         if (sr != null)
         {
             sr.sortingOrder = pos.y;
         }
 
-        newBox.Initialize(pos, this, randNum);
+        box.Initialize(pos, this, randNum);
         allBoxes[pos.x, pos.y] = box;
-
     }
 
 }
