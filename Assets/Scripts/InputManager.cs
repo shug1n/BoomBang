@@ -39,26 +39,18 @@ public class InputManager : MonoBehaviour
             Box clickedBox = hit.collider.GetComponent<Box>();
             if (clickedBox != null)
             {
-                Debug.Log($"Týklanan Kutu: {clickedBox.name} - Renk ID: {clickedBox.itemStyle.colorID}");
+                List<Box> matchingGroup = boardManager.FindMatches(clickedBox);
 
-                if (clickedBox != null)
+                // Kural: En az 2'li grup olmalý
+                if (matchingGroup.Count >= 2)
                 {
-                    List<Box> matchingGroup = boardManager.FindMatches(clickedBox);
+                    Debug.Log($"<color=green>PATLAMA!</color> {matchingGroup.Count} blok gidiyor.");
 
-                    if (matchingGroup.Count >= 2)
-                    {
-                        Debug.Log($"<color=green>PATLAMA!</color> Toplam {matchingGroup.Count} adet {clickedBox.itemStyle.colorID} ID'li blok bulundu.");
-
-                        for (int i = 0; i < matchingGroup.Count; i++)
-                        {
-                            // Debug için patlayanlarýn ismini yaz
-                            matchingGroup[i].gameObject.SetActive(false);
-                        }
-                    }
-                    else
-                    {
-                        Debug.Log("<color=red>Yetersiz Sayý!</color> Tek baþýna patlayamaz.");
-                    }
+                    boardManager.ExplodeGroup(matchingGroup); // Eþleþen gruplarý patlatýyoruz
+                }
+                else
+                {
+                    Debug.Log("<color=red>Tek baþýna patlayamaz!</color>");
                 }
             }
         }

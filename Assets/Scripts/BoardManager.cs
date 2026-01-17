@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -10,9 +11,6 @@ public class BoardManager : MonoBehaviour
 
     [SerializeField]
     private float tileSpacing = 0.85f;
-
-    [SerializeField]
-    private Box[] boxes;
 
     public Box[,] allBoxes;
 
@@ -27,6 +25,14 @@ public class BoardManager : MonoBehaviour
     [SerializeField] private Box boxPrefab;
     [SerializeField] private ItemStyle[] availableStyles;
 
+    [Header("Object Pooling")]
+    private Queue<Box> boxPool = new Queue<Box>();
+    
+    private readonly Vector2Int[] directions = new Vector2Int[]
+    {
+        Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right
+    };
+
     private void Start()
     {
         GenerateGrid();
@@ -36,43 +42,29 @@ public class BoardManager : MonoBehaviour
     private void GenerateGrid()
     {
         allBoxes = new Box[width, height];
-        startPos = new Vector2(-(width - 1)*tileSpacing / 2f, -(height - 1)*tileSpacing / 2f);
+
+        startPos = new Vector2(-(width - 1) * tileSpacing / 2f, -(height - 1) * tileSpacing / 2f);
 
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
-                int randNum = Random.Range(0, availableStyles.Length);
-                CreateBox(new Vector2Int(x, y), boxPrefab, availableStyles[randNum]);
+                ItemStyle randomStyle = availableStyles[Random.Range(0, availableStyles.Length)];
+
+                Box newBox = GetBoxFromPool();
+                newBox.Init(new Vector2Int(x, y), randomStyle, this);
+
+                Vector2 worldPos = startPos + new Vector2(x * tileSpacing, y * tileSpacing);
+                newBox.transform.position = worldPos;
+
+                newBox.GetComponent<SpriteRenderer>().sortingOrder = y;
+
+                allBoxes[x, y] = newBox;
             }
         }
     }
 
-    private void CreateBox(Vector2Int pos, Box prefab, ItemStyle style)
-    {
-        Vector2 posSum = startPos + new Vector2(pos.x * tileSpacing, pos.y * tileSpacing);
-        Box box = Instantiate(prefab, new Vector3(posSum.x, posSum.y, 0), Quaternion.identity);
-
-        box.transform.parent = this.gameObject.transform;
-        box.name = $"{pos.x}, {pos.y}";
-        SpriteRenderer sr = box.GetComponent<SpriteRenderer>();
-        if (sr != null)
-        {
-            sr.sortingOrder = pos.y;
-        }
-
-        box.Init(pos, style, this);
-        allBoxes[pos.x, pos.y] = box;
-    }
-    private readonly Vector2Int[] directions = new Vector2Int[]
-    {
-        Vector2Int.up,
-        Vector2Int.down,
-        Vector2Int.left,
-        Vector2Int.right
-    };
-
-    public List<Box> FindMatches(Box startBox) // Breadth First Search ile match arama fonksiyonu
+    public List<Box> FindMatches(Box startBox) // Breadth first search algoritmasýyla ayný colorID'li bitiþik box'larý arýyoruz
     {
         List<Box> matches = new List<Box>();
         Queue<Box> checkNext = new Queue<Box>();
@@ -86,7 +78,7 @@ public class BoardManager : MonoBehaviour
         {
             Box current = checkNext.Dequeue();
 
-            for(int i = 0; i < directions.Length; i++)
+            for (int i = 0; i < directions.Length; i++)
             {
                 Vector2Int nextPos = current.posIndex + directions[i];
 
@@ -100,7 +92,7 @@ public class BoardManager : MonoBehaviour
                         {
                             visited[nextPos.x, nextPos.y] = true;
                             matches.Add(neighbor);
-                            checkNext.Enqueue(neighbor); // Bunun da komþularýna bakmak için sýraya alýyoruz
+                            checkNext.Enqueue(neighbor);
                         }
                     }
                 }
@@ -130,13 +122,105 @@ public class BoardManager : MonoBehaviour
                     for (int i = 0; i < groupSize; i++)
                     {
                         Box member = group[i];
-
                         member.UpdateVisual(groupSize, thresholdA, thresholdB, thresholdC);
-
                         visited[member.posIndex.x, member.posIndex.y] = true;
                     }
                 }
             }
         }
+    }
+
+    private Box GetBoxFromPool()
+    {
+        if (boxPool.Count > 0)
+        {
+            Box box = boxPool.Dequeue();
+            box.gameObject.SetActive(true);
+            return box;
+        }
+
+        Box newBox = Instantiate(boxPrefab);
+        newBox.transform.parent = transform;
+        return newBox;
+    }
+
+    private void ReturnToPool(Box box)
+    {
+        box.gameObject.SetActive(false);
+        boxPool.Enqueue(box);
+    }
+
+    public void ExplodeGroup(List<Box> group)
+    {
+        StartCoroutine(ExplodeAndRefillRoutine(group));
+    }
+
+    private IEnumerator ExplodeAndRefillRoutine(List<Box> group)
+    {
+        for (int i = 0; i < group.Count; i++)
+        {
+            allBoxes[group[i].posIndex.x, group[i].posIndex.y] = null; // Tüm box'lar listesinde box'u null yaptýk
+
+            // Efekt patlatýlabilir
+
+            ReturnToPool(group[i]);
+        }
+
+        yield return new WaitForSeconds(0.1f);
+
+        for (int x = 0; x < width; x++)
+        {
+            List<Box> movingBoxes = new List<Box>();
+            for (int y = 0; y < height; y++)
+            {
+                if (allBoxes[x, y] != null)
+                {
+                    movingBoxes.Add(allBoxes[x, y]); // Mevcut box'larý ekliyoruz.
+                }
+            }
+
+            int currentY = 0;
+
+            for (int i = 0; i < movingBoxes.Count; i++) // Patlayan box'lar yerine mevcut box'lar düþüyor
+            {
+                if (movingBoxes[i].posIndex.y != currentY)
+                {
+                    movingBoxes[i].posIndex = new Vector2Int(x, currentY);
+                    allBoxes[x, currentY] = movingBoxes[i];
+
+                    Vector2 targetPos = startPos + new Vector2(x * tileSpacing, currentY * tileSpacing);
+                    movingBoxes[i].MoveToPosition(targetPos);
+
+                    // Görsel derinlik ayarý
+                    if (movingBoxes[i].sr != null)
+                        movingBoxes[i].sr.sortingOrder = currentY;
+                }
+                currentY++;
+            }
+
+            while (currentY < height) // Üstteki boþluða pool'dan box getiriyoruz
+            {
+                Box newBox = GetBoxFromPool();
+                ItemStyle randomStyle = availableStyles[Random.Range(0, availableStyles.Length)];
+
+                newBox.Init(new Vector2Int(x, currentY), randomStyle, this);
+                allBoxes[x, currentY] = newBox;
+
+                Vector2 finalPos = startPos + new Vector2(x * tileSpacing, currentY * tileSpacing);
+                // Ekranýn üstünden baþlasýn
+                Vector2 spawnPos = finalPos + new Vector2(0, height * tileSpacing);
+
+                newBox.transform.position = spawnPos;
+                newBox.MoveToPosition(finalPos);
+
+                if (newBox.sr != null)
+                    newBox.sr.sortingOrder = currentY;
+
+                currentY++;
+            }
+        }
+
+        yield return new WaitForSeconds(0.25f);
+        UpdateBoardState();
     }
 }
