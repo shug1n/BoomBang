@@ -27,6 +27,14 @@ public class Box : MonoBehaviour
         gameObject.SetActive(true);
     }
 
+    public bool IsMoving
+    {
+        get
+        {
+            return isMoving;
+        }
+    }
+
     public void MoveToPosition(Vector2 targetPos)
     {
         StartCoroutine(MoveRoutine(targetPos));

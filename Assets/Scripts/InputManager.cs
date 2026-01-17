@@ -39,6 +39,11 @@ public class InputManager : MonoBehaviour
             Box clickedBox = hit.collider.GetComponent<Box>();
             if (clickedBox != null)
             {
+                if (clickedBox.IsMoving)
+                {
+                    return;
+                }
+
                 List<Box> matchingGroup = boardManager.FindMatches(clickedBox);
 
                 // Kural: En az 2'li grup olmalý

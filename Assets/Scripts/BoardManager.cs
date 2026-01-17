@@ -21,6 +21,9 @@ public class BoardManager : MonoBehaviour
     public int thresholdB = 7;
     public int thresholdC = 9;
 
+    private List<Box> matches = new List<Box>();
+    private Queue<Box> checkNext = new Queue<Box>();
+
     [Header("Colors")]
     [SerializeField] private Box boxPrefab;
     [SerializeField] private ItemStyle[] availableStyles;
@@ -66,8 +69,9 @@ public class BoardManager : MonoBehaviour
 
     public List<Box> FindMatches(Box startBox) // Breadth first search algoritmasýyla ayný colorID'li bitiþik box'larý arýyoruz
     {
-        List<Box> matches = new List<Box>();
-        Queue<Box> checkNext = new Queue<Box>();
+        matches.Clear();
+        checkNext.Clear();
+
         bool[,] visited = new bool[width, height];
 
         checkNext.Enqueue(startBox);
