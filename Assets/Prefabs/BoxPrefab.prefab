@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 2151944768437653809}
   - component: {fileID: 6314645312216821768}
   m_Layer: 0
-  m_Name: Blue
+  m_Name: BoxPrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

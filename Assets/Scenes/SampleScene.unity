@@ -379,6 +379,17 @@ MonoBehaviour:
   - {fileID: 3162433956526116837, guid: 8b843c579c278a64cbd6f0dc9c04ab22, type: 3}
   - {fileID: 8946448925504225089, guid: 708b88b86d80c9c48a275332037d6fdf, type: 3}
   - {fileID: 6872117497621892045, guid: 9d1ef13462dc0624d991fa84d65155cc, type: 3}
+  thresholdA: 4
+  thresholdB: 7
+  thresholdC: 9
+  boxPrefab: {fileID: 2151944768437653809, guid: f3d347d0582288046a88cec39b1ac1a3, type: 3}
+  availableStyles:
+  - {fileID: 11400000, guid: 63f358138e881dc478d58ce24dd05627, type: 2}
+  - {fileID: 11400000, guid: d67de45eed41515438f243d5ad86e096, type: 2}
+  - {fileID: 11400000, guid: 33baebdf2fcb1624fbfb11e98272f9c1, type: 2}
+  - {fileID: 11400000, guid: a459463f3b124ab4693daabddd8c9d4e, type: 2}
+  - {fileID: 11400000, guid: d2ed1f481d49ce64bb71885344542a92, type: 2}
+  - {fileID: 11400000, guid: 6cf61876e345b9a439f4eb855b40fb94, type: 2}
 --- !u!4 &737905788
 Transform:
   m_ObjectHideFlags: 0

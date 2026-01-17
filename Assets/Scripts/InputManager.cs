@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -38,10 +39,27 @@ public class InputManager : MonoBehaviour
             Box clickedBox = hit.collider.GetComponent<Box>();
             if (clickedBox != null)
             {
-                Debug.Log($"Týklanan Kutu: {clickedBox.name} - Renk ID: {clickedBox.typeID}");
+                Debug.Log($"Týklanan Kutu: {clickedBox.name} - Renk ID: {clickedBox.itemStyle.colorID}");
 
-                // BURADA BoardManager'daki patlatma fonksiyonunu çaðýracaðýz.
-                // boardManager.ExplodeGroup(clickedBox); 
+                if (clickedBox != null)
+                {
+                    List<Box> matchingGroup = boardManager.FindMatches(clickedBox);
+
+                    if (matchingGroup.Count >= 2)
+                    {
+                        Debug.Log($"<color=green>PATLAMA!</color> Toplam {matchingGroup.Count} adet {clickedBox.itemStyle.colorID} ID'li blok bulundu.");
+
+                        for (int i = 0; i < matchingGroup.Count; i++)
+                        {
+                            // Debug için patlayanlarýn ismini yaz
+                            matchingGroup[i].gameObject.SetActive(false);
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log("<color=red>Yetersiz Sayý!</color> Tek baþýna patlayamaz.");
+                    }
+                }
             }
         }
     }
