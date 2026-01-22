@@ -1,4 +1,4 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -67,7 +67,86 @@ public class BoardManager : MonoBehaviour
         }
     }
 
-    public List<Box> FindMatches(Box startBox) // Breadth first search algoritmasıyla aynı colorID'li bitişik box'ları arıyoruz
+    public bool HasAnyValidMoves()
+    {
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (allBoxes[x, y] == null) continue;
+
+                // Sadece komÅŸulara bak
+                for (int i = 0; i < directions.Length; i++)
+                {
+                    Vector2Int neighborPos = new Vector2Int(x, y) + directions[i];
+
+                    if (IsValidPos(neighborPos) && allBoxes[neighborPos.x, neighborPos.y] != null)
+                    {
+                        if (allBoxes[x, y].itemStyle.colorID == allBoxes[neighborPos.x, neighborPos.y].itemStyle.colorID)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    public void GuaranteedShuffle()
+    {
+        // Mevcut renkleri topla
+        List<ItemStyle> usedStyles = new List<ItemStyle>();
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (allBoxes[x, y] != null && !usedStyles.Contains(allBoxes[x, y].itemStyle))
+                {
+                    usedStyles.Add(allBoxes[x, y].itemStyle);
+                }
+            }
+        }
+
+        int totalBoxes = width * height;
+
+        // Temp array oluÅŸtur
+        ItemStyle[] shuffledStyles = new ItemStyle[totalBoxes];
+
+        // Her renk iÃ§in Ã§ift garantile
+        int index = 0;
+        for (int i = 0; i < usedStyles.Count && index + 1 < totalBoxes; i++)
+        {
+            shuffledStyles[index] = usedStyles[i];
+            shuffledStyles[index + 1] = usedStyles[i];
+            index += 2;
+        }
+
+        // KalanlarÄ± doldur
+        while (index < totalBoxes)
+        {
+            shuffledStyles[index] = usedStyles[Random.Range(0, usedStyles.Count)];
+            index++;
+        }
+
+        // allBoxes'a ata
+        index = 0;
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (allBoxes[x, y] != null)
+                {
+                    allBoxes[x, y].itemStyle = shuffledStyles[index];
+                    index++;
+                }
+            }
+        }
+
+        UpdateBoardState();
+    }
+
+    public List<Box> FindMatches(Box startBox) // Breadth first search algoritmasÄ±yla aynÄ± colorID'li bitiÅŸik box'larÄ± arÄ±yoruz
     {
         matches.Clear();
         checkNext.Clear();
@@ -163,9 +242,9 @@ public class BoardManager : MonoBehaviour
     {
         for (int i = 0; i < group.Count; i++)
         {
-            allBoxes[group[i].posIndex.x, group[i].posIndex.y] = null; // Tüm box'lar listesinde box'u null yaptık
+            allBoxes[group[i].posIndex.x, group[i].posIndex.y] = null; // TÃ¼m box'lar listesinde box'u null yaptÄ±k
 
-            // Efekt patlatılabilir
+            // Efekt patlatÄ±labilir
 
             ReturnToPool(group[i]);
         }
@@ -179,13 +258,13 @@ public class BoardManager : MonoBehaviour
             {
                 if (allBoxes[x, y] != null)
                 {
-                    movingBoxes.Add(allBoxes[x, y]); // Mevcut box'ları ekliyoruz.
+                    movingBoxes.Add(allBoxes[x, y]); // Mevcut box'larÄ± ekliyoruz.
                 }
             }
 
             int currentY = 0;
 
-            for (int i = 0; i < movingBoxes.Count; i++) // Patlayan box'lar yerine mevcut box'lar düşüyor
+            for (int i = 0; i < movingBoxes.Count; i++) // Patlayan box'lar yerine mevcut box'lar dÃ¼ÅŸÃ¼yor
             {
                 if (movingBoxes[i].posIndex.y != currentY)
                 {
@@ -195,14 +274,14 @@ public class BoardManager : MonoBehaviour
                     Vector2 targetPos = startPos + new Vector2(x * tileSpacing, currentY * tileSpacing);
                     movingBoxes[i].MoveToPosition(targetPos);
 
-                    // Görsel derinlik ayarı
+                    // GÃ¶rsel derinlik ayarÄ±
                     if (movingBoxes[i].sr != null)
                         movingBoxes[i].sr.sortingOrder = currentY;
                 }
                 currentY++;
             }
 
-            while (currentY < height) // Üstteki boşluğa pool'dan box getiriyoruz
+            while (currentY < height) // Ãœstteki boÅŸluÄŸa pool'dan box getiriyoruz
             {
                 Box newBox = GetBoxFromPool();
                 ItemStyle randomStyle = availableStyles[Random.Range(0, availableStyles.Length)];
@@ -211,7 +290,7 @@ public class BoardManager : MonoBehaviour
                 allBoxes[x, currentY] = newBox;
 
                 Vector2 finalPos = startPos + new Vector2(x * tileSpacing, currentY * tileSpacing);
-                // Ekranın üstünden başlasın
+                // EkranÄ±n Ã¼stÃ¼nden baÅŸlasÄ±n
                 Vector2 spawnPos = finalPos + new Vector2(0, height * tileSpacing);
 
                 newBox.transform.position = spawnPos;
@@ -226,5 +305,12 @@ public class BoardManager : MonoBehaviour
 
         yield return new WaitForSeconds(0.25f);
         UpdateBoardState();
+
+        if (!HasAnyValidMoves())
+        {
+            Debug.Log("<color=yellow> Deadlock tespit edildi! Shuffle yapÄ±lÄ±yor...</color>");
+            yield return new WaitForSeconds(0.5f); // KullanÄ±cÄ±ya gÃ¶ster
+            GuaranteedShuffle();
+        }
     }
 }

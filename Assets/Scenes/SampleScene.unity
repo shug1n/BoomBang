@@ -369,16 +369,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 165735daa66947944a8ff77cbc160bf8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BoardManager
-  height: 8
+  height: 4
   width: 4
   tileSpacing: 0.85
-  boxes:
-  - {fileID: 2151944768437653809, guid: f3d347d0582288046a88cec39b1ac1a3, type: 3}
-  - {fileID: 8532615598945866039, guid: f8dabd47ccc2f6c408657ccd558e7224, type: 3}
-  - {fileID: 8309879680890694436, guid: f4ea4784a72734e49be27d33dd30fe85, type: 3}
-  - {fileID: 3162433956526116837, guid: 8b843c579c278a64cbd6f0dc9c04ab22, type: 3}
-  - {fileID: 8946448925504225089, guid: 708b88b86d80c9c48a275332037d6fdf, type: 3}
-  - {fileID: 6872117497621892045, guid: 9d1ef13462dc0624d991fa84d65155cc, type: 3}
   thresholdA: 4
   thresholdB: 7
   thresholdC: 9
