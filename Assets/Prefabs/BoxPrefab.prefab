@@ -106,7 +106,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Box
   posIndex: {x: 3, y: 3}
   board: {fileID: 0}
-  typeID: 0
+  itemStyle: {fileID: 0}
+  sr: {fileID: 0}
 --- !u!61 &6314645312216821768
 BoxCollider2D:
   m_ObjectHideFlags: 0

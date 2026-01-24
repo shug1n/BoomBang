@@ -28,19 +28,27 @@ public class BoardManager : MonoBehaviour
     [SerializeField] private Box boxPrefab;
     [SerializeField] private ItemStyle[] availableStyles;
 
+    private AudioSource sfxSource;
+
     [Header("Object Pooling")]
     private Queue<Box> boxPool = new Queue<Box>();
-    
+
     private readonly Vector2Int[] directions = new Vector2Int[]
     {
         Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right
     };
+
+    private void Awake()
+    {
+        sfxSource = GetComponent<AudioSource>();
+    }
 
     private void Start()
     {
         GenerateGrid();
         UpdateBoardState();
     }
+
 
     private void GenerateGrid()
     {
@@ -240,6 +248,13 @@ public class BoardManager : MonoBehaviour
 
     private IEnumerator ExplodeAndRefillRoutine(List<Box> group)
     {
+        if (sfxSource != null)
+        {
+            float randPitch = Random.Range(.8f, 1.2f);
+            sfxSource.pitch = randPitch;
+            sfxSource.Play();
+        }
+
         for (int i = 0; i < group.Count; i++)
         {
             allBoxes[group[i].posIndex.x, group[i].posIndex.y] = null; // Tüm box'lar listesinde box'u null yaptık
