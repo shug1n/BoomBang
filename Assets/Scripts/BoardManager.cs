@@ -33,6 +33,9 @@ public class BoardManager : MonoBehaviour
     [Header("Object Pooling")]
     private Queue<Box> boxPool = new Queue<Box>();
 
+    [SerializeField] private Vector2 referenceGridSize = new Vector2(4, 4);
+
+
     private readonly Vector2Int[] directions = new Vector2Int[]
     {
         Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right
@@ -45,10 +48,23 @@ public class BoardManager : MonoBehaviour
 
     private void Start()
     {
+        CalculateAutoScale();
         GenerateGrid();
         UpdateBoardState();
     }
 
+    private void CalculateAutoScale()
+    {
+        // Direkt oran hesapla (küçük olan kazansın)
+        float scaleX = referenceGridSize.x / width;
+        float scaleY = referenceGridSize.y / height;
+
+        float scaleFactor = Mathf.Min(scaleX, scaleY);
+
+        // Güncelle
+        boxPrefab.transform.localScale = Vector3.one * scaleFactor;
+        tileSpacing = 0.85f * scaleFactor;
+    }
 
     private void GenerateGrid()
     {
