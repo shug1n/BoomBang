@@ -4,27 +4,28 @@ using UnityEngine;
 
 public class BoardManager : MonoBehaviour
 {
-    [SerializeField]
-    private int height = 4;
-    [SerializeField]
-    private int width = 4;
-
-    [SerializeField]
-    private float tileSpacing = 0.85f;
+    [Header("Grid Settings")]
+    [SerializeField] private int height = 4;
+    [SerializeField] private int width = 4;
+    [SerializeField] private float tileSpacing = 0.85f;
+    [SerializeField] private Vector2 referenceGridSize = new Vector2(4, 4);
 
     public Box[,] allBoxes;
     private float scaleFactor;
     private Vector2 startPos;
 
-    [Header("Game Rules")]
+    [Header("Game Rules (Dynamic)")]
     public int thresholdA = 4;
-    public int thresholdB = 7;
-    public int thresholdC = 9;
+    public int thresholdB = 6;
+    public int thresholdC = 8;
+
+    // UI'dan gelen renk sayısını burada tutacağız
+    private int activeColorCount;
 
     private List<Box> matches = new List<Box>();
     private Queue<Box> checkNext = new Queue<Box>();
 
-    [Header("Colors")]
+    [Header("Colors & Prefabs")]
     [SerializeField] private Box boxPrefab;
     [SerializeField] private ItemStyle[] availableStyles;
 
@@ -32,8 +33,6 @@ public class BoardManager : MonoBehaviour
 
     [Header("Object Pooling")]
     private Queue<Box> boxPool = new Queue<Box>();
-
-    [SerializeField] private Vector2 referenceGridSize = new Vector2(4, 4);
 
     private readonly Vector2Int[] directions = new Vector2Int[]
     {
@@ -47,15 +46,25 @@ public class BoardManager : MonoBehaviour
 
     private void Start()
     {
-        CreateBoard(4, 4); // Başlangıçta 4x4
+        CreateBoard(4, 4, 4, 4, 7, 9); 
     }
 
-    public void CreateBoard(int newWidth, int newHeight)
+    public void CreateBoard(int newWidth, int newHeight, int colorCount, int tA, int tB, int tC)
     {
         width = newWidth;
         height = newHeight;
+
+        // Gelen renk sayısını elimizdeki maksimum stil sayısıyla sınırla (Hata çıkmasın)
+        activeColorCount = Mathf.Clamp(colorCount, 1, availableStyles.Length);
+
+        // Thresholdları ayarla
+        thresholdA = tA;
+        thresholdB = tB;
+        thresholdC = tC;
+
         CalculateAutoScale();
 
+        // Eğer halihazırda bir board varsa temizle
         if (allBoxes != null)
         {
             DestroyCurrentBoard();
@@ -73,20 +82,24 @@ public class BoardManager : MonoBehaviour
             {
                 if (allBoxes[x, y] != null)
                 {
-                    ReturnToPool(allBoxes[x, y]);
+                    Destroy(allBoxes[x, y].gameObject);
                 }
             }
         }
         allBoxes = null;
+
+        foreach (Box box in boxPool)
+        {
+            if (box != null) Destroy(box.gameObject);
+        }
+        boxPool.Clear();
     }
 
     private void CalculateAutoScale()
     {
         float scaleX = referenceGridSize.x / width;
         float scaleY = referenceGridSize.y / height;
-
         scaleFactor = Mathf.Min(scaleX, scaleY);
-
         boxPrefab.transform.localScale = Vector3.one * scaleFactor;
         tileSpacing = 0.85f * scaleFactor;
     }
@@ -94,29 +107,28 @@ public class BoardManager : MonoBehaviour
     private void GenerateGrid()
     {
         allBoxes = new Box[width, height];
-
         startPos = new Vector2(-(width - 1) * tileSpacing / 2f, -(height - 1) * tileSpacing / 2f);
 
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
-
                 Box newBox = GetBoxFromPool();
                 newBox.transform.localScale = Vector3.one * scaleFactor;
 
-                ItemStyle randomStyle = availableStyles[Random.Range(0, availableStyles.Length)];
+                ItemStyle randomStyle = availableStyles[Random.Range(0, activeColorCount)];
+
                 newBox.Init(new Vector2Int(x, y), randomStyle, this);
 
                 Vector2 worldPos = startPos + new Vector2(x * tileSpacing, y * tileSpacing);
                 newBox.transform.position = worldPos;
-
                 newBox.GetComponent<SpriteRenderer>().sortingOrder = y;
 
                 allBoxes[x, y] = newBox;
             }
         }
     }
+
 
     public bool HasAnyValidMoves()
     {
@@ -125,17 +137,13 @@ public class BoardManager : MonoBehaviour
             for (int y = 0; y < height; y++)
             {
                 if (allBoxes[x, y] == null) continue;
-
                 for (int i = 0; i < directions.Length; i++)
                 {
                     Vector2Int neighborPos = new Vector2Int(x, y) + directions[i];
-
                     if (IsValidPos(neighborPos) && allBoxes[neighborPos.x, neighborPos.y] != null)
                     {
                         if (allBoxes[x, y].itemStyle.colorID == allBoxes[neighborPos.x, neighborPos.y].itemStyle.colorID)
-                        {
                             return true;
-                        }
                     }
                 }
             }
@@ -145,56 +153,46 @@ public class BoardManager : MonoBehaviour
 
     public void GuaranteedShuffle()
     {
+
         List<ItemStyle> usedStyles = new List<ItemStyle>();
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
-                if (allBoxes[x, y] != null && !usedStyles.Contains(allBoxes[x, y].itemStyle))
-                {
-                    usedStyles.Add(allBoxes[x, y].itemStyle);
-                }
+                if (allBoxes[x, y] != null)
+                    usedStyles.Add(allBoxes[x, y].itemStyle); // Sadece renk referansını al
             }
         }
 
-        int totalBoxes = width * height;
-        ItemStyle[] shuffledStyles = new ItemStyle[totalBoxes];
+        // --- Shuffle Mantığı (Fisher-Yates) ---
+        for (int i = 0; i < usedStyles.Count; i++)
+        {
+            ItemStyle temp = usedStyles[i];
+            int randomIndex = Random.Range(i, usedStyles.Count);
+            usedStyles[i] = usedStyles[randomIndex];
+            usedStyles[randomIndex] = temp;
+        }
 
         int index = 0;
-        for (int i = 0; i < usedStyles.Count && index + 1 < totalBoxes; i++)
-        {
-            shuffledStyles[index] = usedStyles[i];
-            shuffledStyles[index + 1] = usedStyles[i];
-            index += 2;
-        }
-
-        while (index < totalBoxes)
-        {
-            shuffledStyles[index] = usedStyles[Random.Range(0, usedStyles.Count)];
-            index++;
-        }
-
-        index = 0;
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
             {
                 if (allBoxes[x, y] != null)
                 {
-                    allBoxes[x, y].itemStyle = shuffledStyles[index];
+                    allBoxes[x, y].itemStyle = usedStyles[index];
                     index++;
                 }
             }
         }
-
         UpdateBoardState();
     }
+
 
     public List<Box> FindMatches(Box startBox)
     {
         matches.Clear();
         checkNext.Clear();
-
         bool[,] visited = new bool[width, height];
 
         checkNext.Enqueue(startBox);
@@ -204,17 +202,14 @@ public class BoardManager : MonoBehaviour
         while (checkNext.Count > 0)
         {
             Box current = checkNext.Dequeue();
-
             for (int i = 0; i < directions.Length; i++)
             {
                 Vector2Int nextPos = current.posIndex + directions[i];
-
                 if (IsValidPos(nextPos))
                 {
                     if (!visited[nextPos.x, nextPos.y])
                     {
                         Box neighbor = allBoxes[nextPos.x, nextPos.y];
-
                         if (neighbor != null && (neighbor.itemStyle.colorID == startBox.itemStyle.colorID))
                         {
                             visited[nextPos.x, nextPos.y] = true;
@@ -236,7 +231,6 @@ public class BoardManager : MonoBehaviour
     public void UpdateBoardState()
     {
         bool[,] visited = new bool[width, height];
-
         for (int x = 0; x < width; x++)
         {
             for (int y = 0; y < height; y++)
@@ -245,7 +239,6 @@ public class BoardManager : MonoBehaviour
                 {
                     List<Box> group = FindMatches(allBoxes[x, y]);
                     int groupSize = group.Count;
-
                     for (int i = 0; i < groupSize; i++)
                     {
                         Box member = group[i];
@@ -257,6 +250,7 @@ public class BoardManager : MonoBehaviour
         }
     }
 
+    // object pooling
     private Box GetBoxFromPool()
     {
         if (boxPool.Count > 0)
@@ -265,7 +259,6 @@ public class BoardManager : MonoBehaviour
             box.gameObject.SetActive(true);
             return box;
         }
-
         Box newBox = Instantiate(boxPrefab);
         newBox.transform.parent = transform;
         return newBox;
@@ -291,6 +284,7 @@ public class BoardManager : MonoBehaviour
             sfxSource.Play();
         }
 
+        // Patlayanları havuza geri gönder (Oyun içi döngüde pool kullanmaya devam ediyoruz)
         for (int i = 0; i < group.Count; i++)
         {
             allBoxes[group[i].posIndex.x, group[i].posIndex.y] = null;
@@ -299,6 +293,7 @@ public class BoardManager : MonoBehaviour
 
         yield return new WaitForSeconds(0.1f);
 
+        // KUTULARI AŞAĞI KAYDIR
         for (int x = 0; x < width; x++)
         {
             List<Box> movingBoxes = new List<Box>();
@@ -311,7 +306,7 @@ public class BoardManager : MonoBehaviour
             }
 
             int currentY = 0;
-
+            // Mevcutları yerleştir
             for (int i = 0; i < movingBoxes.Count; i++)
             {
                 if (movingBoxes[i].posIndex.y != currentY)
@@ -331,7 +326,8 @@ public class BoardManager : MonoBehaviour
             while (currentY < height)
             {
                 Box newBox = GetBoxFromPool();
-                ItemStyle randomStyle = availableStyles[Random.Range(0, availableStyles.Length)];
+
+                ItemStyle randomStyle = availableStyles[Random.Range(0, activeColorCount)];
 
                 newBox.Init(new Vector2Int(x, currentY), randomStyle, this);
                 allBoxes[x, currentY] = newBox;
