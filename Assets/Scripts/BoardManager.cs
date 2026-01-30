@@ -5,15 +5,15 @@ using UnityEngine;
 public class BoardManager : MonoBehaviour
 {
     [SerializeField]
-    private int height;
+    private int height = 4;
     [SerializeField]
-    private int width;
+    private int width = 4;
 
     [SerializeField]
     private float tileSpacing = 0.85f;
 
     public Box[,] allBoxes;
-
+    private float scaleFactor;
     private Vector2 startPos;
 
     [Header("Game Rules")]
@@ -35,7 +35,6 @@ public class BoardManager : MonoBehaviour
 
     [SerializeField] private Vector2 referenceGridSize = new Vector2(4, 4);
 
-
     private readonly Vector2Int[] directions = new Vector2Int[]
     {
         Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right
@@ -48,20 +47,46 @@ public class BoardManager : MonoBehaviour
 
     private void Start()
     {
+        CreateBoard(4, 4); // Başlangıçta 4x4
+    }
+
+    public void CreateBoard(int newWidth, int newHeight)
+    {
+        width = newWidth;
+        height = newHeight;
         CalculateAutoScale();
+
+        if (allBoxes != null)
+        {
+            DestroyCurrentBoard();
+        }
+
         GenerateGrid();
         UpdateBoardState();
     }
 
+    private void DestroyCurrentBoard()
+    {
+        for (int x = 0; x < allBoxes.GetLength(0); x++)
+        {
+            for (int y = 0; y < allBoxes.GetLength(1); y++)
+            {
+                if (allBoxes[x, y] != null)
+                {
+                    ReturnToPool(allBoxes[x, y]);
+                }
+            }
+        }
+        allBoxes = null;
+    }
+
     private void CalculateAutoScale()
     {
-        // Direkt oran hesapla (küçük olan kazansın)
         float scaleX = referenceGridSize.x / width;
         float scaleY = referenceGridSize.y / height;
 
-        float scaleFactor = Mathf.Min(scaleX, scaleY);
+        scaleFactor = Mathf.Min(scaleX, scaleY);
 
-        // Güncelle
         boxPrefab.transform.localScale = Vector3.one * scaleFactor;
         tileSpacing = 0.85f * scaleFactor;
     }
@@ -76,9 +101,11 @@ public class BoardManager : MonoBehaviour
         {
             for (int y = 0; y < height; y++)
             {
-                ItemStyle randomStyle = availableStyles[Random.Range(0, availableStyles.Length)];
 
                 Box newBox = GetBoxFromPool();
+                newBox.transform.localScale = Vector3.one * scaleFactor;
+
+                ItemStyle randomStyle = availableStyles[Random.Range(0, availableStyles.Length)];
                 newBox.Init(new Vector2Int(x, y), randomStyle, this);
 
                 Vector2 worldPos = startPos + new Vector2(x * tileSpacing, y * tileSpacing);
@@ -99,7 +126,6 @@ public class BoardManager : MonoBehaviour
             {
                 if (allBoxes[x, y] == null) continue;
 
-                // Sadece komşulara bak
                 for (int i = 0; i < directions.Length; i++)
                 {
                     Vector2Int neighborPos = new Vector2Int(x, y) + directions[i];
@@ -119,7 +145,6 @@ public class BoardManager : MonoBehaviour
 
     public void GuaranteedShuffle()
     {
-        // Mevcut renkleri topla
         List<ItemStyle> usedStyles = new List<ItemStyle>();
         for (int x = 0; x < width; x++)
         {
@@ -133,11 +158,8 @@ public class BoardManager : MonoBehaviour
         }
 
         int totalBoxes = width * height;
-
-        // Temp array oluştur
         ItemStyle[] shuffledStyles = new ItemStyle[totalBoxes];
 
-        // Her renk için çift garantile
         int index = 0;
         for (int i = 0; i < usedStyles.Count && index + 1 < totalBoxes; i++)
         {
@@ -146,14 +168,12 @@ public class BoardManager : MonoBehaviour
             index += 2;
         }
 
-        // Kalanları doldur
         while (index < totalBoxes)
         {
             shuffledStyles[index] = usedStyles[Random.Range(0, usedStyles.Count)];
             index++;
         }
 
-        // allBoxes'a ata
         index = 0;
         for (int x = 0; x < width; x++)
         {
@@ -170,7 +190,7 @@ public class BoardManager : MonoBehaviour
         UpdateBoardState();
     }
 
-    public List<Box> FindMatches(Box startBox) // Breadth first search algoritmasıyla aynı colorID'li bitişik box'ları arıyoruz
+    public List<Box> FindMatches(Box startBox)
     {
         matches.Clear();
         checkNext.Clear();
@@ -273,10 +293,7 @@ public class BoardManager : MonoBehaviour
 
         for (int i = 0; i < group.Count; i++)
         {
-            allBoxes[group[i].posIndex.x, group[i].posIndex.y] = null; // Tüm box'lar listesinde box'u null yaptık
-
-            // Efekt patlatılabilir
-
+            allBoxes[group[i].posIndex.x, group[i].posIndex.y] = null;
             ReturnToPool(group[i]);
         }
 
@@ -289,13 +306,13 @@ public class BoardManager : MonoBehaviour
             {
                 if (allBoxes[x, y] != null)
                 {
-                    movingBoxes.Add(allBoxes[x, y]); // Mevcut box'ları ekliyoruz.
+                    movingBoxes.Add(allBoxes[x, y]);
                 }
             }
 
             int currentY = 0;
 
-            for (int i = 0; i < movingBoxes.Count; i++) // Patlayan box'lar yerine mevcut box'lar düşüyor
+            for (int i = 0; i < movingBoxes.Count; i++)
             {
                 if (movingBoxes[i].posIndex.y != currentY)
                 {
@@ -305,14 +322,13 @@ public class BoardManager : MonoBehaviour
                     Vector2 targetPos = startPos + new Vector2(x * tileSpacing, currentY * tileSpacing);
                     movingBoxes[i].MoveToPosition(targetPos);
 
-                    // Görsel derinlik ayarı
                     if (movingBoxes[i].sr != null)
                         movingBoxes[i].sr.sortingOrder = currentY;
                 }
                 currentY++;
             }
 
-            while (currentY < height) // Üstteki boşluğa pool'dan box getiriyoruz
+            while (currentY < height)
             {
                 Box newBox = GetBoxFromPool();
                 ItemStyle randomStyle = availableStyles[Random.Range(0, availableStyles.Length)];
@@ -321,7 +337,6 @@ public class BoardManager : MonoBehaviour
                 allBoxes[x, currentY] = newBox;
 
                 Vector2 finalPos = startPos + new Vector2(x * tileSpacing, currentY * tileSpacing);
-                // Ekranın üstünden başlasın
                 Vector2 spawnPos = finalPos + new Vector2(0, height * tileSpacing);
 
                 newBox.transform.position = spawnPos;
@@ -340,7 +355,7 @@ public class BoardManager : MonoBehaviour
         if (!HasAnyValidMoves())
         {
             Debug.Log("<color=yellow> Deadlock tespit edildi! Shuffle yapılıyor...</color>");
-            yield return new WaitForSeconds(0.5f); // Kullanıcıya göster
+            yield return new WaitForSeconds(0.5f);
             GuaranteedShuffle();
         }
     }
