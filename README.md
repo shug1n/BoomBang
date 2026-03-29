@@ -19,7 +19,7 @@ Oyun, aynı renkteki bitişik bloklara tıklayarak tahtayı temizleme (tap-to-bl
 
 ## ⚙️ Nasıl Çalıştırılır?
 1. Repoyu bilgisayarınıza klonlayın: 
-   `git clone https://github.com/kullaniciadi/BoomBlast.git`
+   `git clone https://github.com/shug1n/BoomBlast.git`
 2. Projeyi Unity Hub üzerinden açın.
 3. `Scenes` klasöründeki `MainScene` sahnesini açın.
 4. Unity Editor'de **Play** butonuna basarak oynayabilirsiniz.
