@@ -1,6 +1,6 @@
-# Boom Blast - Case Study
+# Boom Bang - Case Study
 
-**Boom Blast**, Good Job Games teknik case çalışması için hazırlanmış,bir blast bulmaca oyunu demosudur.
+**Boom Bang**, Good Job Games teknik case çalışması için hazırlanmış,bir blast bulmaca oyunu demosudur.
 
 ## 🚀 Proje Özeti
 Oyun, aynı renkteki bitişik bloklara tıklayarak tahtayı temizleme (tap-to-blast) mekaniği üzerine kuruludur. Geliştirme sürecinde temiz kod mimarisi, akıcı oynanış ve performans optimizasyonu ön planda tutulmuştur. Oyunun müzikleri de bu projeye özel olarak sıfırdan üretilmiştir.
